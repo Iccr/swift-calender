@@ -12,12 +12,21 @@ import CoreGraphics
 
 
 class ViewController: UIViewController {
-
+    
+    // MARK: Outlets
     @IBOutlet weak var calendar: FSCalendar!
     @IBOutlet weak var calenderHeightConstraint: NSLayoutConstraint!
     @IBOutlet weak var tableView: UITableView!
     
-    var dateWithEvents = [("2018-01-03", "loshar"), ("2018-01-04", "Dashain") ,("2018-01-05", "Laxmi Puja") , ("2018-01-06", "maghe sankranti"), ("2018-01-07", "prajatantra diwas"), ("2018-01-08", "Topi diwas")]
+    // MARK: Properties
+    
+    let dateWithEvents = [("2018-01-03", "loshar"), ("2018-01-04", "Dashain") ,("2018-01-05", "Laxmi Puja") , ("2018-01-06", "maghe sankranti"), ("2018-01-07", "prajatantra diwas"), ("2018-01-08", "Topi diwas"),
+                          ("2018-02-03", "loshar")]
+    
+    var selectedDate: String? {didSet {self.filter()}}
+    var fileteredDateWithEvents: [(String, String)]? {didSet {self.tableView.reloadData()}}
+
+    // MARK: Life cycle
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -27,11 +36,32 @@ class ViewController: UIViewController {
         calendar.today = today
         calendar.currentPage = today
         calendar.delegate = self
-//        tableView.delegate = self
-//        tableView.dataSource = self
+        calendar.dataSource = self
+        fileteredDateWithEvents = dateWithEvents
+        self.selectedDate = DateFormatter.stringFrom(date: Date())
+        self.navigationItem.title = "Calender"
     }
     
+    // MARK: Other Functions
     
+    private func filter() {
+        fileteredDateWithEvents = dateWithEvents.filter({dateLiesInGivenMonth(dateString: $0.0, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
+    }
+    
+    private func dateLiesInGivenMonth(dateString: String, month: Date?) -> Bool {
+        guard let date = DateFormatter.DateFrom(string: dateString), let month = month else {return false }
+        let dateComponent = calendar.components.calendar?.dateComponents([.month, .day], from: date)
+        let today = calendar.components.calendar?.dateComponents([.month, .day], from: month)
+        if today?.month == dateComponent?.month && today?.year == dateComponent?.year {
+            return true
+        }
+        return false
+    }
+}
+
+// MARK: Extensions
+
+extension ViewController: FSCalendarDataSource {
     func minimumDateForCalendar(calendar: FSCalendar!) -> NSDate! {
         return calendar.date(withYear: 2015, month: 1, day: 1) as NSDate
     }
@@ -44,27 +74,21 @@ class ViewController: UIViewController {
         let day = calendar.day(of: date as Date)
         return day % 5 == 0 ? day/5 : 0;
     }
-    
-    func calendarCurrentPageDidChange(calendar: FSCalendar!) {
-        
-        NSLog("change page to \(calendar.formatter.string(from: calendar.currentPage)))")
+}
+
+extension ViewController: FSCalendarDelegate {
+    func calendar(_ calendar: FSCalendar, didSelect date: Date, at monthPosition: FSCalendarMonthPosition) {
+        self.selectedDate = DateFormatter.stringFrom(date: date)    
     }
     
-    func calendar(calendar: FSCalendar!, didSelectDate date: NSDate!) {
-        NSLog("calendar did select date \(calendar.formatter.string(from: date as Date))")
+    func calendarCurrentPageDidChange(_ calendar: FSCalendar) {
+        self.selectedDate = DateFormatter.stringFrom(date: calendar.currentPage)
     }
     
     func calendarCurrentScopeWillChange(calendar: FSCalendar!, animated: Bool) {
         calenderHeightConstraint.constant = calendar.sizeThatFits(CGSize.zero).height
         view.layoutIfNeeded()
     }
-    
-    func calendar(calendar: FSCalendar!, imageForDate date: NSDate!) -> UIImage! {
-       
-        return  [13,14].contains(calendar.day(of: date as Date)) ? UIImage(named: "icon_cat") : nil
-    }
-    
-    
     
     func calendar(_ calendar: FSCalendar, numberOfEventsFor date: Date) -> Int {
         var result = 0
@@ -74,56 +98,21 @@ class ViewController: UIViewController {
         }
         return result
     }
-    
-    func dateLiesInThisMonth(dateString: String) -> Bool {
-        if let date = DateFormatter.DateFrom(string: dateString) {
-            let dateComponent = calendar.components.calendar?.dateComponents([.month, .day], from: date)
-            let today = calendar.components.calendar?.dateComponents([.month, .day], from: Date())
-            if today?.month == dateComponent?.month && today?.year == dateComponent?.year {
-                return true
-            }
-        }
-        return false
-    }
 }
-
-
-extension ViewController: UITableViewDelegate {
-    
-    
-}
-extension ViewController: FSCalendarDelegate {
-    
-    
-}
-
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        let result = dateWithEvents.filter({ self.dateLiesInThisMonth(dateString: $0.0)})
-        return result.count
+        let result = fileteredDateWithEvents?.filter({ self.dateLiesInGivenMonth(dateString: $0.0, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
+        return result?.count ?? 0
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell()
-        let event = self.dateWithEvents[indexPath.row]
-        cell.textLabel?.text = event.1
+        let cell = self.tableView.dequeueReusableCell(withIdentifier: "CalendarTableViewCell") as! CalendarTableViewCell
+        let event = self.fileteredDateWithEvents?[indexPath.row]
+        selectedDate == event?.0 ? (cell.Label?.textColor = UIColor.red) : (cell.Label?.textColor = UIColor.black)
+        cell.Label?.text = event?.1
         return cell
     }
 }
 
-
-extension DateFormatter {
-    class func stringFrom(date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-    
-    class func DateFrom(string: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: string)
-    }
-}
-
+extension ViewController: UITableViewDelegate {}
