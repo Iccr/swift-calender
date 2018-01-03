@@ -20,12 +20,20 @@ class ViewController: UIViewController {
     
     // MARK: Properties
     
-    let dateWithEvents = [("2018-01-03", "loshar"), ("2018-01-04", "Dashain") ,("2018-01-05", "Laxmi Puja") , ("2018-01-06", "maghe sankranti"), ("2018-01-07", "prajatantra diwas"), ("2018-01-08", "Topi diwas"),
-                          ("2018-02-03", "loshar")]
+    let allEvent = ["Asian Film Awards[1]", "Beijing Pop Festival", "Being Globally Responsible Conference", "China Baseball League", "China Digital Entertainment Expo & Conference"]
+    
+    var events: [EventModel]? = [
+        EventModel.init(name: "Asian Film Awards[1]" , date: "2018-01-03"),
+        EventModel.init(name: "Beijing Pop Festival" , date: "2018-01-04"),
+        EventModel.init(name: "Being Globally Responsible Conference" , date: "2018-01-05"),
+        EventModel.init(name: "China Baseball League" , date: "2018-01-04"),
+        EventModel.init(name: "Entertainment Expo & Conference" , date: "2018-01-04"),
+        ]
+
     
     var selectedDate: String? {didSet {self.filter()}}
-    var fileteredDateWithEvents: [(String, String)]? {didSet {self.tableView.reloadData()}}
-
+    var fileteredDateWithEvents: [EventModel]? {didSet {self.tableView.reloadData()}}
+    
     // MARK: Life cycle
     
     override func viewDidLoad() {
@@ -37,19 +45,24 @@ class ViewController: UIViewController {
         calendar.currentPage = today
         calendar.delegate = self
         calendar.dataSource = self
-        fileteredDateWithEvents = dateWithEvents
+        fileteredDateWithEvents = events
         self.selectedDate = DateFormatter.stringFrom(date: Date())
         self.navigationItem.title = "Calender"
+        createEvents()
     }
     
     // MARK: Other Functions
     
-    private func filter() {
-        fileteredDateWithEvents = dateWithEvents.filter({dateLiesInGivenMonth(dateString: $0.0, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
+    private func createEvents() {
+        
     }
     
-    private func dateLiesInGivenMonth(dateString: String, month: Date?) -> Bool {
-        guard let date = DateFormatter.DateFrom(string: dateString), let month = month else {return false }
+    private func filter() {
+        fileteredDateWithEvents = events?.filter({dateLiesInGivenMonth(dateString: $0.date, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
+    }
+    
+    private func dateLiesInGivenMonth(dateString: String?, month: Date?) -> Bool {
+        guard let dateString = dateString,  let date = DateFormatter.DateFrom(string: dateString), let month = month else {return false }
         let dateComponent = calendar.components.calendar?.dateComponents([.month, .day], from: date)
         let today = calendar.components.calendar?.dateComponents([.month, .day], from: month)
         if today?.month == dateComponent?.month && today?.year == dateComponent?.year {
@@ -93,26 +106,48 @@ extension ViewController: FSCalendarDelegate {
     func calendar(_ calendar: FSCalendar, numberOfEventsFor date: Date) -> Int {
         var result = 0
         let dateString = DateFormatter.stringFrom(date: date)
-        if let valid = self.dateWithEvents.filter({$0.0 == dateString}).first {
-            result = 1
-        }
+        if let valid = self.events?.filter({$0.date == dateString}).first {result = 1}
+
         return result
     }
 }
 
 extension ViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        let result = fileteredDateWithEvents?.filter({ self.dateLiesInGivenMonth(dateString: $0.0, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
+        let result = fileteredDateWithEvents?.filter({ self.dateLiesInGivenMonth(dateString: $0.date, month: DateFormatter.DateFrom(string: selectedDate ?? ""))})
         return result?.count ?? 0
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = self.tableView.dequeueReusableCell(withIdentifier: "CalendarTableViewCell") as! CalendarTableViewCell
         let event = self.fileteredDateWithEvents?[indexPath.row]
-        selectedDate == event?.0 ? (cell.Label?.textColor = UIColor.red) : (cell.Label?.textColor = UIColor.black)
-        cell.Label?.text = event?.1
+        cell.event = self.events?[indexPath.row]
+        cell.selectedDate = self.selectedDate
+        cell.setup()
         return cell
     }
 }
 
-extension ViewController: UITableViewDelegate {}
+extension ViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let cell = self.tableView.dequeueReusableCell(withIdentifier: "HeaderTableViewCell") as! HeaderTableViewCell
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 44
+    }
+    
+    func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 44
+    }
+    
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 35
+    }
+    
+    func tableView(_ tableView: UITableView, estimatedHeightForHeaderInSection section: Int) -> CGFloat {
+        return 35
+    }
+    
+}
