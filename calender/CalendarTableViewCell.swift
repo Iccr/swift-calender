@@ -19,9 +19,12 @@ class CalendarTableViewCell: UITableViewCell {
         self.eventLabel.text = self.event?.name
         self.dateLabel.text = self.event?.date
         if selectedDate == event?.date {
-            self.dateLabel.textColor = UIColor.red
+            let color = UIColor.red
+            self.dateLabel.textColor = color
+            self.eventLabel.textColor = color
         }else {
-            self.dateLabel.textColor = UIColor.black
-        }
+            let color = UIColor.black
+            self.dateLabel.textColor = color
+            self.eventLabel.textColor = color        }
     }
 }
